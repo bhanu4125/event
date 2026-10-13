@@ -50,7 +50,7 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, portalRole } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
@@ -59,6 +59,34 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email }).select('+password');
     if (!user || !(await user.matchPassword(password))) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    // Strict credential verification for unauthorized portal access
+    if (portalRole) {
+      const normalizedPortal = portalRole.toLowerCase();
+      if (normalizedPortal === 'admin' && user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          code: 'UNAUTHORIZED_ACCESS',
+          message: `Access Denied: You do not have Administrator credentials. Your account is registered as '${user.role.toUpperCase()}'.`,
+        });
+      }
+
+      if (normalizedPortal === 'organizer' && user.role !== 'organizer' && user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          code: 'UNAUTHORIZED_ACCESS',
+          message: `Access Denied: You do not have Organizer credentials. Your account is registered as '${user.role.toUpperCase()}'.`,
+        });
+      }
+
+      if (normalizedPortal === 'student' && user.role !== 'student') {
+        return res.status(403).json({
+          success: false,
+          code: 'UNAUTHORIZED_ACCESS',
+          message: `Access Denied: This account is registered as '${user.role.toUpperCase()}'. Please use the ${user.role.toUpperCase()} login portal.`,
+        });
+      }
     }
 
     const token = generateToken(user._id);

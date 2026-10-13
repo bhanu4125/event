@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('eventra_token') || '');
   const [loading, setLoading] = useState(true);
 
-  // Load user profile on startup if token exists
+  // Load user profile on startup ONLY if token exists
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = localStorage.getItem('eventra_token');
@@ -20,12 +20,10 @@ export const AuthProvider = ({ children }) => {
           console.warn('Session expired or invalid token:', err.message);
           localStorage.removeItem('eventra_token');
           setToken('');
-          // Fallback to organizer demo user for instant testability
-          await switchRole('organizer');
+          setUser(null);
         }
       } else {
-        // Automatically sign in as default organizer for seamless testing
-        await switchRole('organizer');
+        setUser(null);
       }
       setLoading(false);
     };
@@ -33,8 +31,8 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = async (email, password) => {
-    const res = await apiClient.post('/auth/login', { email, password });
+  const login = async (email, password, portalRole = null) => {
+    const res = await apiClient.post('/auth/login', { email, password, portalRole });
     const { token: newToken, ...userData } = res.data.data;
     localStorage.setItem('eventra_token', newToken);
     setToken(newToken);
@@ -57,7 +55,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  // Instant 1-click Role Switcher (Admin, Organizer, Student)
+  // Instant 1-click Role Switcher (Admin, Organizer, Student) for fast testing
   const switchRole = async (targetRole) => {
     try {
       setLoading(true);
@@ -69,6 +67,7 @@ export const AuthProvider = ({ children }) => {
       return userData;
     } catch (err) {
       console.error('Role switch failed:', err.message);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -85,6 +84,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         switchRole,
         isAuthenticated: !!user,
+        isStudent: user?.role === 'student',
         isAdmin: user?.role === 'admin',
         isOrganizer: user?.role === 'organizer' || user?.role === 'admin',
       }}

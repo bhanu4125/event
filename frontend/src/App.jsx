@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/common/Navbar';
+import ProtectedRoute from './components/common/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
 import PublicEventsPage from './pages/PublicEventsPage';
 import RecommendedEventsPage from './pages/RecommendedEventsPage';
 import BookmarksPage from './pages/BookmarksPage';
@@ -22,25 +24,94 @@ function App() {
           <Navbar />
           <div className="flex-1">
             <Routes>
-              {/* Feature 1: Event Discovery & Shortlisting */}
+              {/* Authentication & Role Portals */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/login/:portalRole" element={<LoginPage />} />
+
+              {/* Feature 1: Public Event Discovery */}
               <Route path="/" element={<PublicEventsPage />} />
-              <Route path="/recommended" element={<RecommendedEventsPage />} />
-              <Route path="/bookmarks" element={<BookmarksPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
+
+              {/* Personalized Student Discovery (Protected) */}
+              <Route
+                path="/recommended"
+                element={
+                  <ProtectedRoute allowedRoles={['student', 'organizer', 'admin']} portal="student">
+                    <RecommendedEventsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/bookmarks"
+                element={
+                  <ProtectedRoute allowedRoles={['student', 'organizer', 'admin']} portal="student">
+                    <BookmarksPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Feature 2: Team Formation & Registration */}
               <Route path="/teams" element={<TeamFinderPage />} />
-              <Route path="/teams/me" element={<MyTeamsPage />} />
-              <Route path="/teams/create" element={<CreateTeamPage />} />
-              <Route path="/teams/:id" element={<TeamManagementPage />} />
+              <Route
+                path="/teams/me"
+                element={
+                  <ProtectedRoute allowedRoles={['student', 'organizer', 'admin']} portal="student">
+                    <MyTeamsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teams/create"
+                element={
+                  <ProtectedRoute allowedRoles={['student', 'organizer', 'admin']} portal="student">
+                    <CreateTeamPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teams/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['student', 'organizer', 'admin']} portal="student">
+                    <TeamManagementPage />
+                  </ProtectedRoute>
+                }
+              />
 
-              {/* Organizer Studio */}
-              <Route path="/organizer" element={<OrganizerDashboard />} />
-              <Route path="/organizer/events/new" element={<EventFormPage />} />
-              <Route path="/organizer/events/edit/:id" element={<EventFormPage />} />
+              {/* Organizer Studio (Restricted to Organizers & Admins) */}
+              <Route
+                path="/organizer"
+                element={
+                  <ProtectedRoute allowedRoles={['organizer', 'admin']} portal="organizer">
+                    <OrganizerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/organizer/events/new"
+                element={
+                  <ProtectedRoute allowedRoles={['organizer', 'admin']} portal="organizer">
+                    <EventFormPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/organizer/events/edit/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['organizer', 'admin']} portal="organizer">
+                    <EventFormPage />
+                  </ProtectedRoute>
+                }
+              />
 
-              {/* Administrative Approval Desk */}
-              <Route path="/admin/approvals" element={<AdminApprovalPage />} />
+              {/* Administrative Approval Desk (Restricted to Admins ONLY) */}
+              <Route
+                path="/admin/approvals"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']} portal="admin">
+                    <AdminApprovalPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Catch-all redirect */}
               <Route path="*" element={<Navigate to="/" replace />} />
