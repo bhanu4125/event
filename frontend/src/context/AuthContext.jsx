@@ -1,0 +1,103 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import apiClient from '../api/apiClient';
+
+const AuthContext = createContext(null);
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('eventra_token') || '');
+  const [loading, setLoading] = useState(true);
+
+  // Load user profile on startup if token exists
+  useEffect(() => {
+    const initAuth = async () => {
+      const storedToken = localStorage.getItem('eventra_token');
+      if (storedToken) {
+        try {
+          const res = await apiClient.get('/auth/me');
+          setUser(res.data.data);
+        } catch (err) {
+          console.warn('Session expired or invalid token:', err.message);
+          localStorage.removeItem('eventra_token');
+          setToken('');
+          // Fallback to organizer demo user for instant testability
+          await switchRole('organizer');
+        }
+      } else {
+        // Automatically sign in as default organizer for seamless testing
+        await switchRole('organizer');
+      }
+      setLoading(false);
+    };
+
+    initAuth();
+  }, []);
+
+  const login = async (email, password) => {
+    const res = await apiClient.post('/auth/login', { email, password });
+    const { token: newToken, ...userData } = res.data.data;
+    localStorage.setItem('eventra_token', newToken);
+    setToken(newToken);
+    setUser(userData);
+    return userData;
+  };
+
+  const register = async (userData) => {
+    const res = await apiClient.post('/auth/register', userData);
+    const { token: newToken, ...userPayload } = res.data.data;
+    localStorage.setItem('eventra_token', newToken);
+    setToken(newToken);
+    setUser(userPayload);
+    return userPayload;
+  };
+
+  const logout = () => {
+    localStorage.removeItem('eventra_token');
+    setToken('');
+    setUser(null);
+  };
+
+  // Instant 1-click Role Switcher (Admin, Organizer, Student)
+  const switchRole = async (targetRole) => {
+    try {
+      setLoading(true);
+      const res = await apiClient.post('/auth/demo-login', { role: targetRole });
+      const { token: newToken, ...userData } = res.data.data;
+      localStorage.setItem('eventra_token', newToken);
+      setToken(newToken);
+      setUser(userData);
+      return userData;
+    } catch (err) {
+      console.error('Role switch failed:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        login,
+        register,
+        logout,
+        switchRole,
+        isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
+        isOrganizer: user?.role === 'organizer' || user?.role === 'admin',
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
