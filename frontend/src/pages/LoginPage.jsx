@@ -499,51 +499,6 @@ const LoginPage = () => {
             </Link>
           </div>
         </div>
-
-        {/* Demo Credentials Quick Switcher Footer */}
-        <div className="mt-6 bg-white p-4 rounded-xl border border-slate-200 text-xs text-slate-600">
-          <p className="font-bold text-slate-800 mb-2 flex items-center gap-1.5">
-            <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Pre-Configured Demo Accounts (Password: <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-700">password123</code>):</span>
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                handlePortalSwitch('student');
-                handleFillDemo('student');
-              }}
-              className="text-left p-2 rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition cursor-pointer"
-            >
-              <div className="font-bold text-slate-900 text-[11px]">🎓 Student Demo</div>
-              <div className="text-[10px] text-slate-500 truncate">student@eventra.edu</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                handlePortalSwitch('organizer');
-                handleFillDemo('organizer');
-              }}
-              className="text-left p-2 rounded-lg border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition cursor-pointer"
-            >
-              <div className="font-bold text-slate-900 text-[11px]">⚡ Organizer Demo</div>
-              <div className="text-[10px] text-slate-500 truncate">organizer@eventra.edu</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                handlePortalSwitch('admin');
-                handleFillDemo('admin');
-              }}
-              className="text-left p-2 rounded-lg border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 transition cursor-pointer"
-            >
-              <div className="font-bold text-slate-900 text-[11px]">🛡️ Campus Admin Demo</div>
-              <div className="text-[10px] text-slate-500 truncate">admin@eventra.edu</div>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
