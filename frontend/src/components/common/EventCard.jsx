@@ -122,9 +122,9 @@ const EventCard = ({
 
             <div className="flex items-center justify-between pt-1">
               <div className="flex items-center gap-1.5 text-slate-500">
-                <Users className="w-3.5 h-3.5 text-slate-400" />
+                <Users className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                 <span>
-                  {seatsRemaining} seats left ({event.currentRegistrations || 0}/{event.maxCapacity})
+                  <strong className="text-slate-800">{event.currentRegistrations || 0}</strong> / {event.maxCapacity} seats ({seatsRemaining} left)
                 </span>
               </div>
               <span className="font-semibold text-emerald-700">
@@ -142,6 +142,7 @@ const EventCard = ({
         </span>
 
         <div className="flex items-center gap-2">
+          {/* Action button: Form team or Join event */}
           {isTeamEvent && !isCancelled && (
             <button
               type="button"
@@ -153,6 +154,20 @@ const EventCard = ({
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>Form Team</span>
+            </button>
+          )}
+
+          {!isTeamEvent && !isCancelled && event.status === 'published' && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onOpenDetails) onOpenDetails(event);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center gap-1 shadow-sm transition"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Join</span>
             </button>
           )}
 

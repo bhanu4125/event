@@ -285,17 +285,23 @@ const TeamFinderPage = () => {
                       </Link>
 
                       {!isUserMember && openSlots > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setJoinModalTeam(team);
-                            setDesiredRole(team.openRoles?.[0] || 'Member');
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition"
-                        >
-                          <Send className="w-3 h-3" />
-                          <span>Request to Join</span>
-                        </button>
+                        user?.role === 'admin' ? (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-semibold">
+                            Admin (View Only)
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setJoinModalTeam(team);
+                              setDesiredRole(team.openRoles?.[0] || 'Member');
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition"
+                          >
+                            <Send className="w-3 h-3" />
+                            <span>Request to Join</span>
+                          </button>
+                        )
                       )}
                     </div>
                   </div>

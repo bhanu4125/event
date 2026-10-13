@@ -2,6 +2,8 @@ import Event, { EVENT_CATEGORIES, EVENT_STATUSES } from '../models/Event.js';
 import EventAuditLog from '../models/EventAuditLog.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
+import Registration from '../models/Registration.js';
+import jwt from 'jsonwebtoken';
 
 // Helper: create audit log
 const recordAudit = async ({ eventId, action, previousStatus, newStatus, userId, comments = '' }) => {
@@ -227,18 +229,47 @@ export const updateEvent = async (req, res) => {
 
     await event.save();
 
-    await recordAudit({
-      eventId: event._id,
-      action: 'event_updated',
-      previousStatus,
-      newStatus: event.status,
-      userId: req.user._id,
-      comments: 'Event details updated by organizer',
-    });
+    let finalMessage = 'Event updated successfully';
+
+    // If submitDirectly is requested (e.g. "Update & Submit" or "Resubmit")
+    if (req.body.submitDirectly && ['draft', 'changes_requested', 'rejected', 'pending_approval'].includes(previousStatus)) {
+      const isResubmission = previousStatus === 'changes_requested' || previousStatus === 'rejected' || previousStatus === 'pending_approval';
+      event.status = 'pending_approval';
+      event.submissionDate = new Date();
+      await event.save();
+
+      await recordAudit({
+        eventId: event._id,
+        action: isResubmission ? 'resubmitted_for_approval' : 'submitted_for_approval',
+        previousStatus,
+        newStatus: 'pending_approval',
+        userId: req.user._id,
+        comments: req.body.resubmissionComments || (isResubmission ? 'Resubmitted with modifications' : 'Submitted for review'),
+      });
+
+      await notifyAdmins({
+        senderId: req.user._id,
+        title: isResubmission ? 'Event Resubmitted for Approval' : 'New Event Pending Approval',
+        message: `Organizer ${req.user.name} has ${isResubmission ? 'resubmitted' : 'submitted'} event "${event.title}".`,
+        type: isResubmission ? 'event_resubmitted' : 'event_submitted',
+        eventId: event._id,
+      });
+
+      finalMessage = isResubmission ? 'Event updated and resubmitted for approval successfully!' : 'Event submitted for approval successfully!';
+    } else {
+      await recordAudit({
+        eventId: event._id,
+        action: 'event_updated',
+        previousStatus,
+        newStatus: event.status,
+        userId: req.user._id,
+        comments: 'Event details updated by organizer',
+      });
+    }
 
     res.json({
       success: true,
-      message: 'Event updated successfully',
+      message: finalMessage,
       data: event,
     });
   } catch (error) {
@@ -260,8 +291,8 @@ export const submitForApproval = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to submit this event' });
     }
 
-    // Transition validation
-    if (!['draft', 'changes_requested', 'rejected'].includes(event.status)) {
+    // Transition validation - allows draft, changes_requested, rejected, and pending_approval
+    if (!['draft', 'changes_requested', 'rejected', 'pending_approval'].includes(event.status)) {
       return res.status(400).json({
         success: false,
         message: `Cannot submit event from status '${event.status}'. Valid source statuses: Draft, Changes Requested, Rejected.`,
@@ -277,7 +308,7 @@ export const submitForApproval = async (req, res) => {
     }
 
     const previousStatus = event.status;
-    const isResubmission = previousStatus === 'changes_requested' || previousStatus === 'rejected';
+    const isResubmission = previousStatus === 'changes_requested' || previousStatus === 'rejected' || previousStatus === 'pending_approval';
 
     event.status = 'pending_approval';
     event.submissionDate = new Date();
@@ -427,9 +458,9 @@ export const rejectEvent = async (req, res) => {
 // 6. Admin: Request Modifications / Changes (Pending Approval -> Changes Requested)
 export const requestChanges = async (req, res) => {
   try {
-    const { comments } = req.body;
+    const commentsText = (req.body.comments || req.body.feedback || '').trim();
 
-    if (!comments || !comments.trim()) {
+    if (!commentsText) {
       return res.status(400).json({
         success: false,
         message: 'Please provide detailed comments describing the requested changes.',
@@ -450,7 +481,7 @@ export const requestChanges = async (req, res) => {
 
     const previousStatus = event.status;
     event.status = 'changes_requested';
-    event.adminFeedback = comments.trim();
+    event.adminFeedback = commentsText;
     await event.save();
 
     // Audit Log
@@ -460,7 +491,7 @@ export const requestChanges = async (req, res) => {
       previousStatus,
       newStatus: 'changes_requested',
       userId: req.user._id,
-      comments: `Admin Requested Changes: ${comments.trim()}`,
+      comments: `Admin Requested Changes: ${commentsText}`,
     });
 
     // Notify Organizer
@@ -468,7 +499,7 @@ export const requestChanges = async (req, res) => {
       recipientId: event.organizer,
       senderId: req.user._id,
       title: 'Modifications Requested for Event',
-      message: `The administrator has requested changes for "${event.title}": "${comments.trim()}"`,
+      message: `The administrator has requested changes for "${event.title}": "${commentsText}"`,
       type: 'changes_requested',
       eventId: event._id,
     });
@@ -954,10 +985,20 @@ export const getEventById = async (req, res) => {
     }
 
     // Permission Check:
-    // If user is guest/student, they can only view 'published' or 'cancelled' events
-    const isOwner = req.user && event.organizer._id.toString() === req.user._id.toString();
-    const isAdmin = req.user && req.user.role === 'admin';
+    // Extract user from token if Authorization header is present
+    let currentUser = req.user;
+    if (!currentUser && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'eventra_super_secret_jwt_key_2026_xyz');
+        currentUser = await User.findById(decoded.id);
+      } catch (e) {}
+    }
 
+    const isOwner = currentUser && event.organizer && event.organizer._id.toString() === currentUser._id.toString();
+    const isAdmin = currentUser && currentUser.role === 'admin';
+
+    // If user is guest/student, they can only view 'published' or 'cancelled' events
     if (!isOwner && !isAdmin && !['published', 'cancelled'].includes(event.status)) {
       return res.status(403).json({
         success: false,
@@ -990,3 +1031,213 @@ export const getEventAuditLogs = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// 14. Individual Event Registration (Join Event)
+export const registerForEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    // Role check: Administrators only govern and approve events; cannot participate
+    if (req.user.role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Administrators have governance and approval authority only and cannot register as participants in events.',
+      });
+    }
+
+    if (event.status !== 'published') {
+      return res.status(400).json({
+        success: false,
+        message: `Registration is closed. Event is currently in '${event.status}' status.`,
+      });
+    }
+
+    // Team events require team formation
+    if (event.eventType === 'Team') {
+      return res.status(400).json({
+        success: false,
+        message: 'This is a team-based event. Please create or join a team to register.',
+      });
+    }
+
+    // Deadline check with end-of-day handling for date-only pickers
+    if (event.registrationDeadline) {
+      const deadline = new Date(event.registrationDeadline);
+      const isMidnight = deadline.getUTCHours() === 0 && deadline.getUTCMinutes() === 0;
+      const effectiveDeadline = isMidnight
+        ? new Date(deadline.getTime() + 24 * 60 * 60 * 1000 - 1) // 23:59:59.999 of that day
+        : deadline;
+
+      if (effectiveDeadline < new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Registration deadline for this event has passed.',
+        });
+      }
+    }
+
+    // Live Capacity check
+    if (event.currentRegistrations >= event.maxCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: `Event has reached maximum capacity (${event.maxCapacity} seats). No available seats remaining.`,
+      });
+    }
+
+    // Check duplicate active registration
+    const existingRegistration = await Registration.findOne({
+      event: event._id,
+      participant: req.user._id,
+      status: { $in: ['confirmed', 'pending'] },
+    });
+
+    if (existingRegistration) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already registered for this event.',
+      });
+    }
+
+    // Create Registration
+    const registration = await Registration.create({
+      event: event._id,
+      registrationType: 'individual',
+      participant: req.user._id,
+      status: 'confirmed',
+      registeredAt: new Date(),
+    });
+
+    // Atomically increment currentRegistrations on Event
+    const updatedEvent = await Event.findByIdAndUpdate(
+      event._id,
+      { $inc: { currentRegistrations: 1 } },
+      { new: true }
+    );
+
+    // Send in-app notification
+    await notify({
+      recipientId: req.user._id,
+      senderId: req.user._id,
+      title: 'Registration Confirmed!',
+      message: `You have successfully registered for "${event.title}". Venue: ${event.venue || 'Campus Main Venue'}.`,
+      type: 'registration_confirmed',
+      eventId: event._id,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Successfully registered for the event!',
+      data: {
+        registrationId: registration._id,
+        currentRegistrations: updatedEvent.currentRegistrations,
+        maxCapacity: updatedEvent.maxCapacity,
+        isRegistered: true,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 15. Cancel Registration (Leave Event)
+export const unregisterFromEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    const registration = await Registration.findOne({
+      event: event._id,
+      participant: req.user._id,
+      status: { $in: ['confirmed', 'pending'] },
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active registration found for this event.',
+      });
+    }
+
+    registration.status = 'cancelled';
+    await registration.save();
+
+    // Decrement currentRegistrations atomically (keep >= 0)
+    const newCount = Math.max(0, (event.currentRegistrations || 1) - 1);
+    const updatedEvent = await Event.findByIdAndUpdate(
+      event._id,
+      { $set: { currentRegistrations: newCount } },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: 'Registration successfully cancelled.',
+      data: {
+        currentRegistrations: updatedEvent.currentRegistrations,
+        maxCapacity: updatedEvent.maxCapacity,
+        isRegistered: false,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 16. Get Live Registration Status & Count
+export const getEventRegistrationStatus = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id).select('currentRegistrations maxCapacity status eventType');
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    let isRegistered = false;
+    let userRegistration = null;
+
+    // Check optional token if provided
+    let userId = null;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'eventra_super_secret_jwt_key_2026_xyz');
+        userId = decoded.id;
+      } catch (e) {}
+    }
+
+    if (userId) {
+      userRegistration = await Registration.findOne({
+        event: event._id,
+        $or: [
+          { participant: userId, status: { $in: ['confirmed', 'pending'] } },
+          { 'teamMembers.user': userId, status: { $in: ['confirmed', 'pending'] } },
+        ],
+      });
+      if (userRegistration) {
+        isRegistered = true;
+      }
+    }
+
+    const currentRegistrations = event.currentRegistrations || 0;
+    const maxCapacity = event.maxCapacity || 0;
+    const seatsRemaining = Math.max(0, maxCapacity - currentRegistrations);
+
+    res.json({
+      success: true,
+      data: {
+        currentRegistrations,
+        maxCapacity,
+        seatsRemaining,
+        isRegistered,
+        registration: userRegistration,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

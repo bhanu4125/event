@@ -15,6 +15,9 @@ import {
   getAdminEvents,
   getEventById,
   getEventAuditLogs,
+  registerForEvent,
+  unregisterFromEvent,
+  getEventRegistrationStatus,
 } from '../controllers/eventController.js';
 import { protect, authorize, validateObjectId } from '../middleware/auth.js';
 
@@ -41,6 +44,12 @@ router.post('/:id/request-changes', protect, authorize('admin'), validateObjectI
 // Shared protected routes
 router.post('/:id/cancel', protect, authorize('organizer', 'admin'), validateObjectId(), cancelEvent);
 router.get('/:id/audit-logs', protect, validateObjectId(), getEventAuditLogs);
+
+// Registration & Live Count routes
+router.get('/:id/registration-status', validateObjectId(), getEventRegistrationStatus);
+router.post('/:id/register', protect, validateObjectId(), registerForEvent);
+router.delete('/:id/register', protect, validateObjectId(), unregisterFromEvent);
+
 router.get('/:id', validateObjectId(), getEventById);
 
 export default router;

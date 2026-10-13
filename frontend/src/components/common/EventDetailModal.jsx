@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   X,
   Calendar,
@@ -15,17 +15,133 @@ import {
   History,
   Info,
   UserPlus,
+  CheckCircle2,
+  AlertCircle,
+  LogIn,
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import AuditTimeline from './AuditTimeline';
+import { useAuth } from '../../context/AuthContext';
+import apiClient from '../../api/apiClient';
 
-const EventDetailModal = ({ isOpen, onClose, event }) => {
+const EventDetailModal = ({ isOpen, onClose, event, onEventUpdated }) => {
   const navigate = useNavigate();
+  const { user, isAuthenticated, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('details'); // 'details' | 'audit'
+
+  // Live registration states
+  const [liveRegistrations, setLiveRegistrations] = useState(event?.currentRegistrations || 0);
+  const [maxCapacity, setMaxCapacity] = useState(event?.maxCapacity || 100);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(false);
+  const [submittingAction, setSubmittingAction] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState({ text: '', type: '' });
+
+  // Sync state when modal opens or event changes
+  useEffect(() => {
+    if (!isOpen || !event) return;
+
+    setLiveRegistrations(event.currentRegistrations || 0);
+    setMaxCapacity(event.maxCapacity || 100);
+    setFeedbackMsg({ text: '', type: '' });
+
+    const fetchLiveStatus = async () => {
+      try {
+        setLoadingStatus(true);
+        const res = await apiClient.get(`/events/${event._id}/registration-status`);
+        if (res.data.success && res.data.data) {
+          setLiveRegistrations(res.data.data.currentRegistrations);
+          setMaxCapacity(res.data.data.maxCapacity);
+          setIsRegistered(res.data.data.isRegistered);
+        }
+      } catch (err) {
+        console.error('Failed to load registration status:', err.message);
+      } finally {
+        setLoadingStatus(false);
+      }
+    };
+
+    fetchLiveStatus();
+  }, [isOpen, event]);
 
   if (!isOpen || !event) return null;
 
   const isTeamEvent = event.eventType === 'Team';
+  const seatsRemaining = Math.max(0, maxCapacity - liveRegistrations);
+  const percentFilled = Math.min(100, Math.round((liveRegistrations / (maxCapacity || 1)) * 100));
+
+  // Handle Individual Event Join / Register
+  const handleJoinEvent = async () => {
+    if (!isAuthenticated) {
+      navigate('/login?portal=student');
+      return;
+    }
+
+    try {
+      setSubmittingAction(true);
+      setFeedbackMsg({ text: '', type: '' });
+      const res = await apiClient.post(`/events/${event._id}/register`);
+      
+      const newCount = res.data.data.currentRegistrations;
+      setLiveRegistrations(newCount);
+      setIsRegistered(true);
+      setFeedbackMsg({
+        text: 'You have successfully joined this event! Your seat is reserved.',
+        type: 'success',
+      });
+
+      if (onEventUpdated) {
+        onEventUpdated({
+          ...event,
+          currentRegistrations: newCount,
+        });
+      }
+    } catch (err) {
+      setFeedbackMsg({
+        text: err.message || 'Failed to register for this event',
+        type: 'error',
+      });
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
+  // Handle Cancel Individual Registration
+  const handleCancelRegistration = async () => {
+    if (!window.confirm('Are you sure you want to cancel your registration and release your seat?')) {
+      return;
+    }
+
+    try {
+      setSubmittingAction(true);
+      setFeedbackMsg({ text: '', type: '' });
+      const res = await apiClient.delete(`/events/${event._id}/register`);
+
+      const newCount = res.data.data.currentRegistrations;
+      setLiveRegistrations(newCount);
+      setIsRegistered(false);
+      setFeedbackMsg({
+        text: 'Your registration has been cancelled.',
+        type: 'info',
+      });
+
+      if (onEventUpdated) {
+        onEventUpdated({
+          ...event,
+          currentRegistrations: newCount,
+        });
+      }
+    } catch (err) {
+      setFeedbackMsg({
+        text: err.message || 'Failed to cancel registration',
+        type: 'error',
+      });
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
@@ -49,7 +165,7 @@ const EventDetailModal = ({ isOpen, onClose, event }) => {
                 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80';
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
           <div className="absolute bottom-4 left-6 right-6 flex flex-wrap items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -95,29 +211,25 @@ const EventDetailModal = ({ isOpen, onClose, event }) => {
         <div className="overflow-y-auto p-6 space-y-6 flex-1">
           {activeTab === 'details' ? (
             <>
-              {/* Admin Remarks alert if changes requested or rejected */}
-              {(event.status === 'changes_requested' || event.status === 'rejected') && (
-                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-1">
-                  <div className="flex items-center gap-2 font-bold text-amber-800 text-sm">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Administrator Feedback:</span>
-                  </div>
-                  <p className="text-sm text-amber-800 whitespace-pre-wrap pl-6">
-                    {event.adminFeedback || event.rejectionReason}
-                  </p>
-                </div>
-              )}
-
-              {/* Cancellation notice */}
-              {event.status === 'cancelled' && (
-                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 space-y-1">
-                  <div className="flex items-center gap-2 font-bold text-rose-800 text-sm">
-                    <X className="w-4 h-4" />
-                    <span>Notice: Event Cancelled</span>
-                  </div>
-                  <p className="text-sm text-rose-800 pl-6">
-                    Reason: {event.cancellationReason || 'Cancelled by administration/organizer.'}
-                  </p>
+              {/* Feedback Alert Box */}
+              {feedbackMsg.text && (
+                <div
+                  className={`p-4 rounded-xl border flex items-center gap-3 animate-in fade-in duration-150 ${
+                    feedbackMsg.type === 'success'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : feedbackMsg.type === 'error'
+                      ? 'bg-rose-50 border-rose-200 text-rose-800'
+                      : 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                  }`}
+                >
+                  {feedbackMsg.type === 'success' ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  ) : feedbackMsg.type === 'error' ? (
+                    <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                  ) : (
+                    <Info className="w-5 h-5 text-indigo-600 shrink-0" />
+                  )}
+                  <span className="text-xs font-semibold">{feedbackMsg.text}</span>
                 </div>
               )}
 
@@ -163,18 +275,167 @@ const EventDetailModal = ({ isOpen, onClose, event }) => {
                   </div>
                 </div>
 
+                {/* Capacity Card with Live Status Pill */}
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-purple-100 text-purple-700">
                     <Users className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-[11px] text-slate-500 block font-medium">Capacity</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-slate-500 font-medium">Capacity</span>
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    </div>
                     <span className="text-sm font-bold text-slate-900">
-                      {event.currentRegistrations || 0} / {event.maxCapacity} seats
+                      {liveRegistrations} / {maxCapacity} seats
                     </span>
                   </div>
                 </div>
               </div>
+
+              {/* Live Capacity Meter Banner */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-indigo-600" />
+                    <span>Live Attendee Capacity</span>
+                  </span>
+                  <span className="font-semibold text-slate-600">
+                    <strong className="text-indigo-600">{liveRegistrations}</strong> of{' '}
+                    <strong className="text-slate-900">{maxCapacity}</strong> filled ({seatsRemaining} seats left)
+                  </span>
+                </div>
+                {/* Visual Progress Bar */}
+                <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 ${
+                      percentFilled >= 100
+                        ? 'bg-rose-500'
+                        : percentFilled >= 80
+                        ? 'bg-amber-500'
+                        : 'bg-indigo-600'
+                    }`}
+                    style={{ width: `${percentFilled}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* ACTION REGISTRATION BANNER */}
+              {event.status === 'published' && (
+                isAdmin ? (
+                  /* Admin Governance Notice */
+                  <div className="p-4 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2.5 text-purple-900 font-semibold">
+                      <ShieldCheck className="w-5 h-5 text-purple-600 shrink-0" />
+                      <div>
+                        <span className="font-bold block">Campus Admin Governance Role</span>
+                        <span className="text-[11px] text-purple-700 font-normal">
+                          Administrators have event creation, editing, and approval authority only. Participation in events as an attendee is restricted.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : !isAuthenticated ? (
+                  /* Guest: Needs to Log In */
+                  <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div>
+                      <h5 className="text-sm font-bold text-indigo-950">Registration Open</h5>
+                      <p className="text-xs text-indigo-800">
+                        {seatsRemaining > 0
+                          ? `Sign in with your campus account to join this event (${seatsRemaining} seats remaining).`
+                          : 'This event is currently full.'}
+                      </p>
+                    </div>
+                    <Link
+                      to="/login?portal=student"
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm shrink-0"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      <span>Sign In to Join</span>
+                    </Link>
+                  </div>
+                ) : isTeamEvent ? (
+                  /* Team Event Registration */
+                  <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div>
+                      <h5 className="text-sm font-bold text-indigo-950">Team Event Registration</h5>
+                      <p className="text-xs text-indigo-800">
+                        Form a team of {event.minTeamSize} to {event.maxTeamSize} members to compete in this event.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate(`/teams/create?eventId=${event._id}`);
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm shrink-0"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span>Create / Register Team</span>
+                    </button>
+                  </div>
+                ) : (
+                  /* Individual Event Registration (The Join Button!) */
+                  <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h5 className="text-sm font-bold text-indigo-950">
+                          {isRegistered ? 'Registration Confirmed!' : 'Individual Event Registration'}
+                        </h5>
+                        {isRegistered && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase">
+                            Registered
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-indigo-800 mt-0.5">
+                        {isRegistered
+                          ? `You are confirmed to attend at ${event.venue || 'Campus Venue'}. Seat reserved.`
+                          : seatsRemaining > 0
+                          ? `Venue capacity has ${seatsRemaining} seats available. Click Join to reserve your spot instantly.`
+                          : 'This event has reached full capacity. No seats remain.'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isRegistered ? (
+                        <button
+                          type="button"
+                          onClick={handleCancelRegistration}
+                          disabled={submittingAction}
+                          className="px-3.5 py-2 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition"
+                        >
+                          {submittingAction ? 'Processing...' : 'Cancel Registration'}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleJoinEvent}
+                          disabled={submittingAction || seatsRemaining <= 0}
+                          className={`px-5 py-2.5 rounded-xl text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition ${
+                            seatsRemaining <= 0
+                              ? 'bg-slate-400 cursor-not-allowed'
+                              : 'bg-indigo-600 hover:bg-indigo-700'
+                          }`}
+                        >
+                          {submittingAction ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Reserving Seat...</span>
+                            </>
+                          ) : seatsRemaining <= 0 ? (
+                            <span>Capacity Full</span>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>Join Event Now</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              )}
 
               {/* Short & Detailed Descriptions */}
               <div className="space-y-3">
@@ -257,35 +518,15 @@ const EventDetailModal = ({ isOpen, onClose, event }) => {
               </div>
 
               {/* Rules & Guidelines */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-slate-600" />
-                  <span>Rules & Code of Conduct</span>
-                </h4>
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 whitespace-pre-wrap">
-                  {event.rules}
-                </div>
-              </div>
-
-              {/* Action Banner for Team Formation */}
-              {isTeamEvent && event.status === 'published' && (
-                <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div>
-                    <h5 className="text-sm font-bold text-indigo-950">Team Event Registration</h5>
-                    <p className="text-xs text-indigo-800">
-                      Form a team of {event.minTeamSize} to {event.maxTeamSize} members to compete in this event.
-                    </p>
+              {event.rules && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-slate-600" />
+                    <span>Rules & Code of Conduct</span>
+                  </h4>
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 whitespace-pre-wrap">
+                    {event.rules}
                   </div>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      navigate(`/teams/create?eventId=${event._id}`);
-                    }}
-                    className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm shrink-0"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Create / Register Team</span>
-                  </button>
                 </div>
               )}
 

@@ -28,6 +28,14 @@ export const createTeam = async (req, res) => {
   try {
     const { name, description, eventId, requiredSkills, openRoles, isPublicRecruiting } = req.body;
 
+    // Admins only govern and approve events; they cannot participate in events
+    if (req.user.role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Administrators have governance and approval authority only and cannot participate in events or form competitor teams.',
+      });
+    }
+
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Team name is required' });
     }
@@ -522,6 +530,13 @@ export const respondInvitation = async (req, res) => {
       });
     }
 
+    if (action === 'accept' && req.user.role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Administrators have governance authority only and cannot accept team invitations or participate in events.',
+      });
+    }
+
     if (action === 'reject') {
       invitation.status = 'rejected';
       await invitation.save();
@@ -600,6 +615,14 @@ export const respondInvitation = async (req, res) => {
 // 12. Send Join Request (Student applies to team)
 export const sendJoinRequest = async (req, res) => {
   try {
+    // Admins cannot participate in events or join teams
+    if (req.user.role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Administrators have governance authority only and cannot join competitor teams or participate in events.',
+      });
+    }
+
     const { desiredRole, message } = req.body;
     const team = await Team.findById(req.params.id);
 
@@ -782,8 +805,15 @@ export const registerTeam = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Team not found' });
     }
 
-    if (team.leader.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only the team leader can register the team' });
+    if (req.user.role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Administrators have governance authority only (create and approve events) and cannot participate or register in events.',
+      });
+    }
+
+    if (team.leader.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Only the student team leader can register the team' });
     }
 
     if (team.status === 'registered') {

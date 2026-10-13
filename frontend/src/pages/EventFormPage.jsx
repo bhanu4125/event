@@ -17,6 +17,7 @@ import {
   Mail,
   Phone,
   Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -95,6 +96,8 @@ const EventFormPage = () => {
   const [fetching, setFetching] = useState(isEditMode);
   const [errors, setErrors] = useState({});
   const [statusMessage, setStatusMessage] = useState('');
+  const [eventStatus, setEventStatus] = useState('');
+  const [adminFeedback, setAdminFeedback] = useState('');
 
   useEffect(() => {
     if (isEditMode) {
@@ -103,6 +106,8 @@ const EventFormPage = () => {
           setFetching(true);
           const res = await apiClient.get(`/events/${id}`);
           const evt = res.data.data;
+          setEventStatus(evt.status || '');
+          setAdminFeedback(evt.adminFeedback || evt.rejectionReason || '');
           setFormData({
             title: evt.title,
             shortDescription: evt.shortDescription,
@@ -231,13 +236,14 @@ const EventFormPage = () => {
       setLoading(true);
       setStatusMessage('');
 
-      const payload = { ...formData, submitDirectly };
+      const payload = {
+        ...formData,
+        submitDirectly,
+        resubmissionComments: 'Organizer updated details and resubmitted for approval',
+      };
 
       if (isEditMode) {
         await apiClient.put(`/events/${id}`, payload);
-        if (submitDirectly) {
-          await apiClient.post(`/events/${id}/submit`);
-        }
       } else {
         await apiClient.post('/events', payload);
       }
@@ -271,11 +277,20 @@ const EventFormPage = () => {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                {isEditMode ? 'Edit Campus Event' : 'Create Campus Event'}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                  {isEditMode ? 'Edit Campus Event' : 'Create Campus Event'}
+                </h1>
+                {eventStatus === 'changes_requested' && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold uppercase">
+                    Changes Requested
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500">
-                Complete all event parameters for administrative review and publication.
+                {eventStatus === 'changes_requested'
+                  ? 'Update requested event parameters and resubmit to administration for approval.'
+                  : 'Complete all event parameters for administrative review and publication.'}
               </p>
             </div>
           </div>
@@ -288,22 +303,48 @@ const EventFormPage = () => {
               className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 transition"
             >
               <Save className="w-4 h-4 text-slate-500" />
-              <span>{isEditMode ? 'Update' : 'Save Draft'}</span>
+              <span>{isEditMode ? 'Save Updates' : 'Save Draft'}</span>
             </button>
             <button
               type="button"
               disabled={loading}
               onClick={() => handleSubmit(true)}
-              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+              className={`px-5 py-2 rounded-xl text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition ${
+                eventStatus === 'changes_requested'
+                  ? 'bg-amber-600 hover:bg-amber-700'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
             >
               <Send className="w-4 h-4" />
-              <span>{isEditMode ? 'Update & Submit' : 'Submit for Approval'}</span>
+              <span>
+                {eventStatus === 'changes_requested'
+                  ? 'Save & Resubmit to Admin'
+                  : isEditMode
+                  ? 'Update & Submit'
+                  : 'Submit for Approval'}
+              </span>
             </button>
           </div>
         </div>
       </section>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
+        {/* Admin Feedback Box when Changes are Requested */}
+        {eventStatus === 'changes_requested' && (
+          <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 space-y-2 animate-in fade-in duration-150">
+            <div className="flex items-center gap-2 font-bold text-sm text-amber-900">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              <span>Action Required: Administrator Requested Modifications</span>
+            </div>
+            <div className="p-3 bg-white/90 rounded-xl border border-amber-200 text-xs text-amber-900 font-medium">
+              <strong>Administrator Feedback:</strong> {adminFeedback || 'Please address required changes before resubmission.'}
+            </div>
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              Please make the requested adjustments in the form below (e.g. venue, timings, or details). Once ready, click <strong>"Save & Resubmit to Admin"</strong> above to send this event back to the dean/admin desk.
+            </p>
+          </div>
+        )}
+
         {statusMessage && (
           <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />

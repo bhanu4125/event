@@ -146,6 +146,15 @@ const PublicEventsPage = () => {
     });
   };
 
+  const handleEventUpdated = (updatedEvent) => {
+    setEvents((prev) =>
+      prev.map((e) => (e._id === updatedEvent._id ? { ...e, ...updatedEvent } : e))
+    );
+    if (selectedEvent && selectedEvent._id === updatedEvent._id) {
+      setSelectedEvent((prev) => ({ ...prev, ...updatedEvent }));
+    }
+  };
+
   return (
     <div className="min-h-screen pb-20 bg-[#F8FAFC]">
       {/* Header & Hero */}
@@ -409,6 +418,7 @@ const PublicEventsPage = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         event={selectedEvent}
+        onEventUpdated={handleEventUpdated}
       />
     </div>
   );

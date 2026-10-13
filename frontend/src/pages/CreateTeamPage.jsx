@@ -89,8 +89,14 @@ const CreateTeamPage = () => {
     }));
   };
 
+  const { user, isAdmin } = useAuth();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isAdmin) {
+      setErrorMsg('Administrators have governance authority only and cannot create or participate in competitor teams.');
+      return;
+    }
     if (!formData.name.trim()) {
       setErrorMsg('Please enter a team name');
       return;
@@ -135,6 +141,32 @@ const CreateTeamPage = () => {
       </section>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        {isAdmin && (
+          <div className="mb-6 p-6 rounded-2xl bg-purple-50 border border-purple-200 text-purple-900 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-sm">
+              <AlertCircle className="w-5 h-5 text-purple-600 shrink-0" />
+              <span>Campus Administrator Policy</span>
+            </div>
+            <p className="text-xs text-purple-800 leading-relaxed">
+              Administrators are restricted to platform governance (approving, creating, and publishing events). Administrators cannot participate in events or form competitor teams.
+            </p>
+            <div className="pt-2 flex gap-3">
+              <Link
+                to="/admin/approvals"
+                className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition shadow-sm"
+              >
+                Go to Admin Approval Desk
+              </Link>
+              <Link
+                to="/organizer/events/new"
+                className="px-3.5 py-1.5 rounded-xl bg-white border border-purple-200 text-purple-700 text-xs font-bold hover:bg-purple-100/50 transition"
+              >
+                Create New Event
+              </Link>
+            </div>
+          </div>
+        )}
+
         {errorMsg && (
           <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />

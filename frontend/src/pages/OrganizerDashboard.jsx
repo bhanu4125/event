@@ -104,7 +104,9 @@ const OrganizerDashboard = () => {
           setModalConfig((prev) => ({ ...prev, isOpen: false }));
           fetchOrganizerData();
         } catch (err) {
-          alert(err.message);
+          showToast(err.message || 'Failed to submit event');
+          setModalConfig((prev) => ({ ...prev, isOpen: false }));
+          fetchOrganizerData();
         } finally {
           setActionLoading(false);
         }
