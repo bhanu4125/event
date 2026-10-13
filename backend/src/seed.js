@@ -12,7 +12,10 @@ import Registration from './models/Registration.js';
 
 dotenv.config();
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/eventra';
+let MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/eventra';
+if (MONGO_URI.includes('mongodb+srv://') && !MONGO_URI.split('?')[0].includes('.net/')) {
+  MONGO_URI = MONGO_URI.replace('.net', '.net/eventra');
+}
 
 const seedDatabase = async () => {
   try {
