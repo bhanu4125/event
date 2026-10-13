@@ -17,7 +17,6 @@ import {
   Mail,
   User,
   Building,
-  KeyRound,
 } from 'lucide-react';
 
 const PORTALS = {
@@ -33,9 +32,6 @@ const PORTALS = {
     textAccent: 'text-indigo-600',
     ringFocus: 'focus:ring-indigo-500',
     btnBg: 'bg-indigo-600 hover:bg-indigo-700',
-    demoEmail: 'student@eventra.edu',
-    demoPass: 'password123',
-    demoLabel: 'Elena Rostova (CS 3rd Year)',
     defaultRedirect: '/',
     allowRegister: true,
   },
@@ -51,9 +47,6 @@ const PORTALS = {
     textAccent: 'text-emerald-600',
     ringFocus: 'focus:ring-emerald-500',
     btnBg: 'bg-emerald-600 hover:bg-emerald-700',
-    demoEmail: 'organizer@eventra.edu',
-    demoPass: 'password123',
-    demoLabel: 'Devin Vance (Lead Organizer)',
     defaultRedirect: '/organizer',
     allowRegister: true,
   },
@@ -69,9 +62,6 @@ const PORTALS = {
     textAccent: 'text-purple-600',
     ringFocus: 'focus:ring-purple-500',
     btnBg: 'bg-purple-600 hover:bg-purple-700',
-    demoEmail: 'admin@eventra.edu',
-    demoPass: 'password123',
-    demoLabel: 'Dr. Sarah Jenkins (Dean of Affairs)',
     defaultRedirect: '/admin/approvals',
     allowRegister: false,
   },
@@ -131,14 +121,6 @@ const LoginPage = () => {
     setErrorMessage('');
     setErrorCode('');
     setMode('login');
-  };
-
-  const handleFillDemo = (pId = activePortal) => {
-    const config = PORTALS[pId];
-    setEmail(config.demoEmail);
-    setPassword(config.demoPass);
-    setErrorMessage('');
-    setErrorCode('');
   };
 
   const handleLoginSubmit = async (e) => {
@@ -275,21 +257,6 @@ const LoginPage = () => {
                 {activePortal === 'admin' && <ShieldAlert className="w-6 h-6" />}
               </div>
             </div>
-
-            {/* Quick Demo Credentials Autofill Banner */}
-            <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 text-slate-600 truncate">
-                <KeyRound className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="truncate">Demo: <strong>{currentConfig.demoEmail}</strong></span>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleFillDemo(activePortal)}
-                className={`font-semibold hover:underline cursor-pointer shrink-0 ml-2 ${currentConfig.textAccent}`}
-              >
-                1-Click Autofill
-              </button>
-            </div>
           </div>
 
           {/* Form Body */}
@@ -354,7 +321,7 @@ const LoginPage = () => {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder={currentConfig.demoEmail}
+                      placeholder="name@eventra.edu"
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                     />
                   </div>
