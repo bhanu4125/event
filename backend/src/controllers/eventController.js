@@ -607,16 +607,36 @@ export const cancelEvent = async (req, res) => {
   }
 };
 
-// 9. Public Events (Only 'published' or 'cancelled' status for campus directory)
+// 9. Public Events (Advanced Search, Filtering, Sorting & Pagination)
 export const getPublicEvents = async (req, res) => {
   try {
-    const { category, search, department } = req.query;
+    const {
+      search,
+      category,
+      department,
+      academicYear,
+      eventType,
+      isPaid,
+      isOnline,
+      dateFrom,
+      dateTo,
+      registrationOpenOnly,
+      availableSeatsOnly,
+      includeCancelled,
+      sortBy = 'date_asc',
+      page = 1,
+      limit = 9,
+    } = req.query;
 
-    // Strict Backend Rule: Students should see only published events (or cancelled with clear indicator).
-    // Draft, pending, rejected, changes_requested MUST NEVER appear in public listings!
-    const query = {
-      status: { $in: ['published', 'cancelled'] },
-    };
+    const now = new Date();
+    const query = {};
+
+    // By default, exclude cancelled events from upcoming discover listings unless explicitly requested
+    if (includeCancelled === 'true') {
+      query.status = { $in: ['published', 'cancelled'] };
+    } else {
+      query.status = 'published';
+    }
 
     if (category && category !== 'All') {
       query.category = category;
@@ -626,20 +646,200 @@ export const getPublicEvents = async (req, res) => {
       query.departmentRestrictions = { $in: ['All Departments', department] };
     }
 
-    if (search) {
+    if (academicYear && academicYear !== 'All') {
+      query.academicYearRestrictions = { $in: ['All Years', academicYear] };
+    }
+
+    if (eventType && eventType !== 'All') {
+      query.eventType = eventType;
+    }
+
+    if (isPaid !== undefined && isPaid !== 'All') {
+      query.isPaid = isPaid === 'true';
+    }
+
+    if (isOnline !== undefined && isOnline !== 'All') {
+      query.isOnline = isOnline === 'true';
+    }
+
+    // Date Range
+    if (dateFrom || dateTo) {
+      query.eventDate = {};
+      if (dateFrom) query.eventDate.$gte = new Date(dateFrom);
+      if (dateTo) query.eventDate.$lte = new Date(dateTo);
+    }
+
+    // Registration Open
+    if (registrationOpenOnly === 'true') {
+      query.registrationStartDate = { $lte: now };
+      query.registrationDeadline = { $gte: now };
+    }
+
+    // Available Seats
+    if (availableSeatsOnly === 'true') {
+      query.$expr = { $lt: ['$currentRegistrations', '$maxCapacity'] };
+    }
+
+    // Text Search
+    if (search && search.trim()) {
+      const trimmedSearch = search.trim();
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { shortDescription: { $regex: search, $options: 'i' } },
-        { venue: { $regex: search, $options: 'i' } },
+        { title: { $regex: trimmedSearch, $options: 'i' } },
+        { shortDescription: { $regex: trimmedSearch, $options: 'i' } },
+        { detailedDescription: { $regex: trimmedSearch, $options: 'i' } },
+        { venue: { $regex: trimmedSearch, $options: 'i' } },
       ];
     }
 
+    // Sorting
+    let sortOptions = { eventDate: 1 };
+    if (sortBy === 'date_desc') sortOptions = { eventDate: -1 };
+    else if (sortBy === 'deadline_asc') sortOptions = { registrationDeadline: 1 };
+    else if (sortBy === 'popularity') sortOptions = { currentRegistrations: -1 };
+    else if (sortBy === 'capacity') sortOptions = { maxCapacity: -1 };
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 9);
+    const skip = (pageNum - 1) * limitNum;
+
+    const total = await Event.countDocuments(query);
     const events = await Event.find(query)
+      .populate('organizer', 'name email department phone')
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limitNum);
+
+    res.json({
+      success: true,
+      total,
+      totalPages: Math.ceil(total / limitNum) || 1,
+      currentPage: pageNum,
+      count: events.length,
+      data: events,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 9b. Rule-Based Personalized Event Recommendations
+export const getRecommendedEvents = async (req, res) => {
+  try {
+    const user = req.user || (await User.findOne({ role: 'student' }));
+    const userInterests = user?.interests && user.interests.length > 0
+      ? user.interests
+      : ['Web Development', 'Artificial Intelligence', 'Hackathons'];
+
+    const userDept = user?.department || 'Computer Science';
+    const now = new Date();
+    const fourteenDaysFromNow = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+    // Fetch active published events only
+    const events = await Event.find({ status: 'published' })
+      .populate('organizer', 'name email department')
+      .lean();
+
+    const scoredEvents = events.map((event) => {
+      let score = 0;
+      const reasons = [];
+
+      // 1. Category / Keyword Interest Match: +40 points
+      const hasInterestMatch = userInterests.some((interest) => {
+        const lowerInterest = interest.toLowerCase();
+        return (
+          event.category.toLowerCase().includes(lowerInterest) ||
+          event.title.toLowerCase().includes(lowerInterest) ||
+          event.shortDescription.toLowerCase().includes(lowerInterest)
+        );
+      });
+
+      if (hasInterestMatch) {
+        score += 40;
+        reasons.push('Matches your interests');
+      }
+
+      // 2. Registration is Open: +20 points
+      const isRegOpen =
+        new Date(event.registrationStartDate) <= now &&
+        new Date(event.registrationDeadline) >= now;
+      if (isRegOpen) {
+        score += 20;
+        reasons.push('Registration open now');
+      }
+
+      // 3. Seats Available: +15 points
+      if (event.currentRegistrations < event.maxCapacity) {
+        score += 15;
+        reasons.push('Seats available');
+      }
+
+      // 4. Event Date Approaching (within 14 days): +10 points
+      if (new Date(event.eventDate) >= now && new Date(event.eventDate) <= fourteenDaysFromNow) {
+        score += 10;
+        reasons.push('Happening soon');
+      }
+
+      // 5. Department Eligibility Match: +15 points
+      const deptMatch =
+        event.departmentRestrictions.includes('All Departments') ||
+        event.departmentRestrictions.includes(userDept);
+      if (deptMatch) {
+        score += 15;
+        reasons.push('Department eligible');
+      }
+
+      return {
+        ...event,
+        recommendationScore: score,
+        matchReasons: reasons,
+      };
+    });
+
+    // Sort descending by score, tie-breaker: eventDate ascending
+    scoredEvents.sort((a, b) => {
+      if (b.recommendationScore !== a.recommendationScore) {
+        return b.recommendationScore - a.recommendationScore;
+      }
+      return new Date(a.eventDate) - new Date(b.eventDate);
+    });
+
+    res.json({
+      success: true,
+      count: scoredEvents.length,
+      data: scoredEvents.slice(0, 8),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 9c. Event Calendar View
+export const getEventsCalendar = async (req, res) => {
+  try {
+    const { month } = req.query; // format: 'YYYY-MM'
+    let startDate;
+    let endDate;
+
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const [year, m] = month.split('-').map(Number);
+      startDate = new Date(year, m - 1, 1);
+      endDate = new Date(year, m, 0, 23, 59, 59, 999);
+    } else {
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+
+    const events = await Event.find({
+      status: 'published',
+      eventDate: { $gte: startDate, $lte: endDate },
+    })
       .populate('organizer', 'name email department')
       .sort({ eventDate: 1 });
 
     res.json({
       success: true,
+      month: month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
       count: events.length,
       data: events,
     });

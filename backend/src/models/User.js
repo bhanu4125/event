@@ -42,6 +42,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    interests: {
+      type: [String],
+      default: ['Web Development', 'Artificial Intelligence', 'Hackathons'],
+    },
   },
   {
     timestamps: true,

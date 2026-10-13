@@ -3,25 +3,20 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import apiClient from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
 import {
-  Sparkles,
   ArrowLeft,
   Calendar,
-  Clock,
-  MapPin,
   Users,
-  DollarSign,
-  Tag,
-  ShieldCheck,
-  FileText,
-  Mail,
-  Phone,
-  User,
   Image,
   Send,
   Save,
-  CheckCircle2,
   AlertCircle,
-  HelpCircle,
+  Clock,
+  MapPin,
+  Tag,
+  ShieldCheck,
+  Mail,
+  Phone,
+  Sparkles,
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -88,7 +83,7 @@ const EventFormPage = () => {
     academicYearRestrictions: ['All Years'],
     isPaid: false,
     registrationFee: 0,
-    rules: '1. Maintain discipline and university decorum.\n2. Carry physical college ID card.\n3. Late entries after start time are strictly prohibited.',
+    rules: '1. Maintain discipline.\n2. Carry physical college ID.\n3. Late entries prohibited.',
     contactInfo: {
       name: user?.name || '',
       email: user?.email || '',
@@ -101,7 +96,6 @@ const EventFormPage = () => {
   const [errors, setErrors] = useState({});
   const [statusMessage, setStatusMessage] = useState('');
 
-  // If edit mode, load event
   useEffect(() => {
     if (isEditMode) {
       const loadEvent = async () => {
@@ -215,9 +209,9 @@ const EventFormPage = () => {
     if (!formData.startTime) newErrors.startTime = 'Start time is required';
     if (!formData.endTime) newErrors.endTime = 'End time is required';
     if (!formData.registrationDeadline) newErrors.registrationDeadline = 'Registration deadline is required';
-    if (!formData.contactInfo.name.trim()) newErrors['contact.name'] = 'Contact person name is required';
+    if (!formData.contactInfo.name.trim()) newErrors['contact.name'] = 'Contact name is required';
     if (!formData.contactInfo.email.trim()) newErrors['contact.email'] = 'Contact email is required';
-    if (!formData.contactInfo.phone.trim()) newErrors['contact.phone'] = 'Contact phone number is required';
+    if (!formData.contactInfo.phone.trim()) newErrors['contact.phone'] = 'Contact phone is required';
 
     if (formData.eventType === 'Team' && Number(formData.maxTeamSize) < Number(formData.minTeamSize)) {
       newErrors.maxTeamSize = 'Max team size cannot be smaller than min team size';
@@ -229,7 +223,7 @@ const EventFormPage = () => {
 
   const handleSubmit = async (submitDirectly = false) => {
     if (!validateForm()) {
-      setStatusMessage('Please fix the errors highlighted in red before proceeding.');
+      setStatusMessage('Please fix the highlighted errors before saving.');
       return;
     }
 
@@ -237,10 +231,7 @@ const EventFormPage = () => {
       setLoading(true);
       setStatusMessage('');
 
-      const payload = {
-        ...formData,
-        submitDirectly,
-      };
+      const payload = { ...formData, submitDirectly };
 
       if (isEditMode) {
         await apiClient.put(`/events/${id}`, payload);
@@ -261,539 +252,359 @@ const EventFormPage = () => {
 
   if (fetching) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400">
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center text-slate-500">
+        <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
         <span className="ml-3 text-sm">Loading event details...</span>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/organizer"
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {isEditMode ? 'Edit Campus Event' : 'Create Campus Event'}
-            </h1>
-            <p className="text-xs text-slate-400">
-              Provide comprehensive details for review and approval by campus authorities.
-            </p>
+    <div className="min-h-screen pb-20 bg-[#F8FAFC]">
+      <section className="bg-white border-b border-slate-200 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/organizer"
+              className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900 transition"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                {isEditMode ? 'Edit Campus Event' : 'Create Campus Event'}
+              </h1>
+              <p className="text-xs text-slate-500">
+                Complete all event parameters for administrative review and publication.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => handleSubmit(false)}
+              className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 transition"
+            >
+              <Save className="w-4 h-4 text-slate-500" />
+              <span>{isEditMode ? 'Update' : 'Save Draft'}</span>
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => handleSubmit(true)}
+              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+            >
+              <Send className="w-4 h-4" />
+              <span>{isEditMode ? 'Update & Submit' : 'Submit for Approval'}</span>
+            </button>
           </div>
         </div>
+      </section>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => handleSubmit(false)}
-            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-2 border border-slate-700 transition"
-          >
-            <Save className="w-4 h-4 text-slate-400" />
-            <span>{isEditMode ? 'Update Details' : 'Save as Draft'}</span>
-          </button>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
+        {statusMessage && (
+          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{statusMessage}</span>
+          </div>
+        )}
 
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => handleSubmit(true)}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition hover:scale-[1.02]"
-          >
-            <Send className="w-4 h-4" />
-            <span>{isEditMode ? 'Update & Submit' : 'Submit for Approval'}</span>
-          </button>
-        </div>
-      </div>
-
-      {statusMessage && (
-        <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{statusMessage}</span>
-        </div>
-      )}
-
-      {/* Form sections */}
-      <form className="space-y-8" onSubmit={(e) => e.preventDefault()}>
-        {/* Section 1: Core Details */}
-        <section className="p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 space-y-6">
-          <div className="flex items-center gap-2 border-b border-slate-800/60 pb-3">
-            <Sparkles className="w-4 h-4 text-indigo-400" />
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+          {/* Section 1: Overview */}
+          <div className="clean-card p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">
               1. Event Overview & Category
-            </h2>
-          </div>
+            </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">
-                Event Title <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="e.g., CodeSprint 2026: 24-Hour Hackathon"
-                className={`w-full px-4 py-2.5 rounded-xl bg-slate-950 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  errors.title ? 'border-rose-500' : 'border-slate-800'
-                }`}
-              />
-              {errors.title && <p className="text-xs text-rose-400">{errors.title}</p>}
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-xs font-bold text-slate-700">
+                  Event Title <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder="e.g. HackNova 2026: Campus Hackathon"
+                  className={`w-full px-3.5 py-2 rounded-xl bg-slate-50 border text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white ${
+                    errors.title ? 'border-rose-500' : 'border-slate-300'
+                  }`}
+                />
+                {errors.title && <p className="text-[11px] text-rose-500">{errors.title}</p>}
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Category</label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Category</label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Participation Format</label>
-              <select
-                name="eventType"
-                value={formData.eventType}
-                onChange={handleChange}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="Individual">Individual Participant</option>
-                <option value="Team">Team Event</option>
-              </select>
-            </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Participation Format</label>
+                <select
+                  name="eventType"
+                  value={formData.eventType}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="Individual">Individual Participant</option>
+                  <option value="Team">Team Event</option>
+                </select>
+              </div>
 
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">
-                Short Catchy Summary <span className="text-rose-400">*</span> (Displayed on cards)
-              </label>
-              <input
-                type="text"
-                name="shortDescription"
-                maxLength={300}
-                value={formData.shortDescription}
-                onChange={handleChange}
-                placeholder="A compelling 1-2 sentence hook highlighting the event..."
-                className={`w-full px-4 py-2.5 rounded-xl bg-slate-950 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  errors.shortDescription ? 'border-rose-500' : 'border-slate-800'
-                }`}
-              />
-              {errors.shortDescription && (
-                <p className="text-xs text-rose-400">{errors.shortDescription}</p>
-              )}
-            </div>
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-xs font-bold text-slate-700">
+                  Short Summary <span className="text-rose-500">*</span> (Displayed on cards)
+                </label>
+                <input
+                  type="text"
+                  name="shortDescription"
+                  value={formData.shortDescription}
+                  onChange={handleChange}
+                  placeholder="A concise 1-2 sentence hook highlighting the event..."
+                  className={`w-full px-3.5 py-2 rounded-xl bg-slate-50 border text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white ${
+                    errors.shortDescription ? 'border-rose-500' : 'border-slate-300'
+                  }`}
+                />
+              </div>
 
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">
-                Detailed Event Description <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                rows={4}
-                name="detailedDescription"
-                value={formData.detailedDescription}
-                onChange={handleChange}
-                placeholder="Comprehensive agenda, tracks, expected outcomes, speaker profiles..."
-                className={`w-full px-4 py-2.5 rounded-xl bg-slate-950 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  errors.detailedDescription ? 'border-rose-500' : 'border-slate-800'
-                }`}
-              />
-              {errors.detailedDescription && (
-                <p className="text-xs text-rose-400">{errors.detailedDescription}</p>
-              )}
-            </div>
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-xs font-bold text-slate-700">
+                  Detailed Event Description <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  name="detailedDescription"
+                  value={formData.detailedDescription}
+                  onChange={handleChange}
+                  placeholder="Complete event agenda, guidelines, speakers, prize pools..."
+                  className={`w-full px-3.5 py-2 rounded-xl bg-slate-50 border text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white ${
+                    errors.detailedDescription ? 'border-rose-500' : 'border-slate-300'
+                  }`}
+                />
+              </div>
 
-            {/* Poster selection */}
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <Image className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Event Poster Image URL</span>
-              </label>
-              <input
-                type="text"
-                name="posterUrl"
-                value={formData.posterUrl}
-                onChange={handleChange}
-                placeholder="https://images.unsplash.com/..."
-                className="w-full px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <div className="flex items-center gap-2 pt-1 text-xs text-slate-400">
-                <span>Or select a preset poster:</span>
-                {SAMPLE_POSTERS.map((p, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setFormData((prev) => ({ ...prev, posterUrl: p }))}
-                    className="h-7 w-10 rounded border border-slate-700 overflow-hidden hover:scale-110 transition"
-                  >
-                    <img src={p} alt={`preset ${i}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
+              <div className="md:col-span-2 space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Poster Image URL</label>
+                <input
+                  type="text"
+                  name="posterUrl"
+                  value={formData.posterUrl}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                />
+                <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500">
+                  <span>Presets:</span>
+                  {SAMPLE_POSTERS.map((p, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, posterUrl: p })}
+                      className="h-6 w-9 rounded border border-slate-200 overflow-hidden hover:scale-105 transition"
+                    >
+                      <img src={p} alt={`p-${i}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </section>
 
-        {/* Section 2: Venue & Schedule */}
-        <section className="p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 space-y-6">
-          <div className="flex items-center gap-2 border-b border-slate-800/60 pb-3">
-            <Calendar className="w-4 h-4 text-emerald-400" />
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+          {/* Section 2: Venue & Schedule */}
+          <div className="clean-card p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">
               2. Venue & Timing
-            </h2>
-          </div>
+            </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="sm:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">
-                Campus Venue <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                name="venue"
-                value={formData.venue}
-                onChange={handleChange}
-                placeholder="e.g., Main Auditorium, Lab 204"
-                className={`w-full px-4 py-2.5 rounded-xl bg-slate-950 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  errors.venue ? 'border-rose-500' : 'border-slate-800'
-                }`}
-              />
-              {errors.venue && <p className="text-xs text-rose-400">{errors.venue}</p>}
-            </div>
-
-            <div className="sm:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">
-                Event Date <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="date"
-                name="eventDate"
-                value={formData.eventDate}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 rounded-xl bg-slate-950 border text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  errors.eventDate ? 'border-rose-500' : 'border-slate-800'
-                }`}
-              />
-              {errors.eventDate && <p className="text-xs text-rose-400">{errors.eventDate}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Start Time</label>
-              <input
-                type="text"
-                name="startTime"
-                value={formData.startTime}
-                onChange={handleChange}
-                placeholder="10:00 AM"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">End Time</label>
-              <input
-                type="text"
-                name="endTime"
-                value={formData.endTime}
-                onChange={handleChange}
-                placeholder="04:00 PM"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Registration Opens</label>
-              <input
-                type="date"
-                name="registrationStartDate"
-                value={formData.registrationStartDate}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">
-                Registration Deadline <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="date"
-                name="registrationDeadline"
-                value={formData.registrationDeadline}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 rounded-xl bg-slate-950 border text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  errors.registrationDeadline ? 'border-rose-500' : 'border-slate-800'
-                }`}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Section 3: Capacity, Teams & Pricing */}
-        <section className="p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 space-y-6">
-          <div className="flex items-center gap-2 border-b border-slate-800/60 pb-3">
-            <Users className="w-4 h-4 text-purple-400" />
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-              3. Capacity, Teams & Fees
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Max Capacity</label>
-              <input
-                type="number"
-                min={1}
-                name="maxCapacity"
-                value={formData.maxCapacity}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            {formData.eventType === 'Team' && (
-              <>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-300">Min Team Members</label>
-                  <input
-                    type="number"
-                    min={1}
-                    name="minTeamSize"
-                    value={formData.minTeamSize}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-300">Max Team Members</label>
-                  <input
-                    type="number"
-                    min={1}
-                    name="maxTeamSize"
-                    value={formData.maxTeamSize}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2.5 rounded-xl bg-slate-950 border text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                      errors.maxTeamSize ? 'border-rose-500' : 'border-slate-800'
-                    }`}
-                  />
-                  {errors.maxTeamSize && (
-                    <p className="text-xs text-rose-400">{errors.maxTeamSize}</p>
-                  )}
-                </div>
-              </>
-            )}
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Ticketing</label>
-              <div className="flex items-center gap-3 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                  <input
-                    type="checkbox"
-                    name="isPaid"
-                    checked={formData.isPaid}
-                    onChange={handleChange}
-                    className="rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                  />
-                  <span>Paid Event</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="sm:col-span-2 space-y-1">
+                <label className="text-xs font-bold text-slate-700">
+                  Venue Location <span className="text-rose-500">*</span>
                 </label>
-                {formData.isPaid && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-slate-400">$</span>
+                <input
+                  type="text"
+                  name="venue"
+                  value={formData.venue}
+                  onChange={handleChange}
+                  placeholder="e.g. Auditorium Hall 2"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-1">
+                <label className="text-xs font-bold text-slate-700">
+                  Event Date <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="eventDate"
+                  value={formData.eventDate}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Start Time</label>
+                <input
+                  type="text"
+                  name="startTime"
+                  value={formData.startTime}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">End Time</label>
+                <input
+                  type="text"
+                  name="endTime"
+                  value={formData.endTime}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Registration Opens</label>
+                <input
+                  type="date"
+                  name="registrationStartDate"
+                  value={formData.registrationStartDate}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">
+                  Registration Deadline <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="registrationDeadline"
+                  value={formData.registrationDeadline}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Capacity & Teams */}
+          <div className="clean-card p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">
+              3. Capacity, Teams & Fees
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Max Capacity</label>
+                <input
+                  type="number"
+                  name="maxCapacity"
+                  value={formData.maxCapacity}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {formData.eventType === 'Team' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Min Team Size</label>
                     <input
                       type="number"
-                      min={0}
-                      name="registrationFee"
-                      value={formData.registrationFee}
+                      name="minTeamSize"
+                      value={formData.minTeamSize}
                       onChange={handleChange}
-                      className="w-20 px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white"
-                      placeholder="Fee"
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
-                )}
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Max Team Size</label>
+                    <input
+                      type="number"
+                      name="maxTeamSize"
+                      value={formData.maxTeamSize}
+                      onChange={handleChange}
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Section 4: Eligibility & Contact */}
+          <div className="clean-card p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">
+              4. Contact Information & Code of Conduct
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Contact Person</label>
+                <input
+                  type="text"
+                  name="contact.name"
+                  value={formData.contactInfo.name}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Contact Email</label>
+                <input
+                  type="email"
+                  name="contact.email"
+                  value={formData.contactInfo.email}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Contact Phone</label>
+                <input
+                  type="text"
+                  name="contact.phone"
+                  value={formData.contactInfo.phone}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="sm:col-span-3 space-y-1">
+                <label className="text-xs font-bold text-slate-700">Rules & Code of Conduct</label>
+                <textarea
+                  rows={2}
+                  name="rules"
+                  value={formData.rules}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
               </div>
             </div>
           </div>
-        </section>
-
-        {/* Section 4: Eligibility & Restrictions */}
-        <section className="p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 space-y-6">
-          <div className="flex items-center gap-2 border-b border-slate-800/60 pb-3">
-            <ShieldCheck className="w-4 h-4 text-cyan-400" />
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-              4. Eligibility & Restrictions
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">
-                General Eligibility Criteria
-              </label>
-              <input
-                type="text"
-                name="eligibilityCriteria"
-                value={formData.eligibilityCriteria}
-                onChange={handleChange}
-                placeholder="e.g., Open to all registered students with college ID"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            {/* Department pills */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-300">Allowed Departments</label>
-              <div className="flex flex-wrap gap-2">
-                {DEPARTMENTS.map((dept) => {
-                  const active = formData.departmentRestrictions.includes(dept);
-                  return (
-                    <button
-                      type="button"
-                      key={dept}
-                      onClick={() => toggleDepartment(dept)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                        active
-                          ? 'bg-indigo-600 text-white shadow'
-                          : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                      }`}
-                    >
-                      {dept}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Academic Year pills */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-300">Allowed Academic Years</label>
-              <div className="flex flex-wrap gap-2">
-                {YEARS.map((yr) => {
-                  const active = formData.academicYearRestrictions.includes(yr);
-                  return (
-                    <button
-                      type="button"
-                      key={yr}
-                      onClick={() => toggleYear(yr)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                        active
-                          ? 'bg-indigo-600 text-white shadow'
-                          : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                      }`}
-                    >
-                      {yr}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Rules */}
-            <div className="space-y-1.5 pt-2">
-              <label className="text-xs font-bold text-slate-300">Rules & Code of Conduct</label>
-              <textarea
-                rows={3}
-                name="rules"
-                value={formData.rules}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Section 5: Contact Information */}
-        <section className="p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 space-y-6">
-          <div className="flex items-center gap-2 border-b border-slate-800/60 pb-3">
-            <Mail className="w-4 h-4 text-amber-400" />
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-              5. Organizer Contact Info
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Contact Person Name</label>
-              <input
-                type="text"
-                name="contact.name"
-                value={formData.contactInfo.name}
-                onChange={handleChange}
-                placeholder="Full Name"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Contact Email</label>
-              <input
-                type="email"
-                name="contact.email"
-                value={formData.contactInfo.email}
-                onChange={handleChange}
-                placeholder="organizer@university.edu"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Contact Phone</label>
-              <input
-                type="text"
-                name="contact.phone"
-                value={formData.contactInfo.phone}
-                onChange={handleChange}
-                placeholder="+1 555-0100"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-          <Link
-            to="/organizer"
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition"
-          >
-            Cancel
-          </Link>
-
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => handleSubmit(false)}
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-2 border border-slate-700 transition"
-          >
-            <Save className="w-4 h-4 text-slate-400" />
-            <span>Save as Draft</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => handleSubmit(true)}
-            className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition hover:scale-[1.02]"
-          >
-            <Send className="w-4 h-4" />
-            <span>Submit for Admin Approval</span>
-          </button>
-        </div>
-      </form>
+        </form>
+      </main>
     </div>
   );
 };

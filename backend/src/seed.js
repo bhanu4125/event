@@ -4,6 +4,11 @@ import User from './models/User.js';
 import Event from './models/Event.js';
 import EventAuditLog from './models/EventAuditLog.js';
 import Notification from './models/Notification.js';
+import Team from './models/Team.js';
+import TeamInvitation from './models/TeamInvitation.js';
+import JoinRequest from './models/JoinRequest.js';
+import Bookmark from './models/Bookmark.js';
+import Registration from './models/Registration.js';
 
 dotenv.config();
 
@@ -19,6 +24,11 @@ const seedDatabase = async () => {
     await Event.deleteMany({});
     await EventAuditLog.deleteMany({});
     await Notification.deleteMany({});
+    await Team.deleteMany({});
+    await TeamInvitation.deleteMany({});
+    await JoinRequest.deleteMany({});
+    await Bookmark.deleteMany({});
+    await Registration.deleteMany({});
     console.log(' Cleared old data');
 
     // Create users
@@ -367,7 +377,63 @@ const seedDatabase = async () => {
       },
     ]);
 
-    console.log(' Seeded Audit Logs and Notifications successfully');
+    // Create Bookmarks
+    await Bookmark.create([
+      { user: student._id, event: publishedEvent._id },
+    ]);
+
+    // Create Team: Neural Hackers for HackNova
+    const team1 = await Team.create({
+      name: 'Neural Hackers',
+      description: 'Building an edge AI assistive drone platform for emergency campus rescue.',
+      event: publishedEvent._id,
+      leader: student._id,
+      members: [
+        { user: student._id, role: 'Team Leader & ML Engineer', joinedAt: new Date() },
+      ],
+      requiredSkills: ['Python', 'PyTorch', 'React', 'Robotics'],
+      openRoles: ['Frontend Developer', 'Hardware Specialist', 'UI Designer'],
+      isPublicRecruiting: true,
+      status: 'forming',
+    });
+
+    // Create Team 2: Cloud Sync
+    const team2 = await Team.create({
+      name: 'CloudSync Squad',
+      description: 'Developing decentralized collaborative document workspaces on IPFS & WebRTC.',
+      event: publishedEvent._id,
+      leader: organizer._id,
+      members: [
+        { user: organizer._id, role: 'Team Leader', joinedAt: new Date() },
+      ],
+      requiredSkills: ['Go', 'Docker', 'WebSockets', 'Tailwind'],
+      openRoles: ['Fullstack Engineer', 'DevOps Specialist'],
+      isPublicRecruiting: true,
+      status: 'forming',
+    });
+
+    // Create Join Request for team1
+    await JoinRequest.create({
+      team: team1._id,
+      event: publishedEvent._id,
+      applicant: organizer._id,
+      message: 'Hey! I would love to join your team as a frontend engineer. I have 2 years of React experience.',
+      desiredRole: 'Frontend Developer',
+      status: 'pending',
+    });
+
+    // Create Invitation from team2 to student
+    await TeamInvitation.create({
+      team: team2._id,
+      event: publishedEvent._id,
+      sender: organizer._id,
+      recipient: student._id,
+      invitedRole: 'Core Developer',
+      message: 'We noticed your strong AI background and would love you to lead our machine learning module!',
+      status: 'pending',
+    });
+
+    console.log(' Seeded Teams, Bookmarks, Invitations, and Join Requests successfully');
     console.log(' Database seed complete!');
     process.exit(0);
   } catch (error) {

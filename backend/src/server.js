@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import bookmarkRoutes from './routes/bookmarkRoutes.js';
+import teamRoutes from './routes/teamRoutes.js';
 
 dotenv.config();
 
@@ -27,6 +29,8 @@ app.use(morgan('dev'));
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/bookmarks', bookmarkRoutes);
+app.use('/api/teams', teamRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

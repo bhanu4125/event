@@ -10,13 +10,14 @@ import {
   Bell,
   Check,
   CheckCheck,
-  UserCheck,
-  ChevronDown,
-  Info,
+  Bookmark,
+  Users,
+  Compass,
+  Search,
 } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, switchRole, isAdmin } = useAuth();
+  const { user, switchRole, isAdmin, isOrganizer } = useAuth();
   const location = useLocation();
 
   const [notifications, setNotifications] = useState([]);
@@ -25,26 +26,20 @@ const Navbar = () => {
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
   const notifRef = useRef(null);
 
-  // Fetch notifications
   const fetchNotifications = async () => {
     if (!user) return;
     try {
       const res = await apiClient.get('/notifications');
       setNotifications(res.data.data || []);
       setUnreadCount(res.data.unreadCount || 0);
-    } catch (err) {
-      // ignore in background
-    }
+    } catch (err) {}
   };
 
-  // Fetch admin pending count
   const fetchPendingCount = async () => {
     try {
       const res = await apiClient.get('/events/admin/all?status=pending_approval');
       setPendingReviewCount(res.data.stats?.pending || 0);
-    } catch (err) {
-      // ignore
-    }
+    } catch (err) {}
   };
 
   useEffect(() => {
@@ -57,7 +52,6 @@ const Navbar = () => {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Handle outside click for notification popover
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) {
@@ -75,9 +69,7 @@ const Navbar = () => {
         prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
       );
       setUnreadCount((c) => Math.max(0, c - 1));
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) {}
   };
 
   const handleMarkAllRead = async () => {
@@ -85,114 +77,160 @@ const Navbar = () => {
       await apiClient.patch('/notifications/mark-all-read');
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) {}
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand */}
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition">
-            <Sparkles className="w-5 h-5 animate-pulse" />
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <div className="h-9 w-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm group-hover:bg-indigo-700 transition">
+            <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-xl tracking-tight text-white group-hover:text-indigo-300 transition">
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold text-lg tracking-tight text-slate-900 group-hover:text-indigo-600 transition">
                 EVENTRA
               </span>
-              <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                PRO
+              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                Campus
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium hidden sm:block">
-              Campus Events & Workflow
-            </p>
           </div>
         </Link>
 
         {/* Center Nav Links */}
-        <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-2xl bg-slate-900/90 border border-slate-800/80 text-sm font-semibold">
+        <nav className="hidden lg:flex items-center gap-1 text-sm font-semibold text-slate-600">
           <Link
             to="/"
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
               location.pathname === '/'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-indigo-50 text-indigo-700 font-bold'
+                : 'hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Compass className="w-4 h-4" />
+            <span>Discover</span>
+          </Link>
+
+          <Link
+            to="/recommended"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+              location.pathname === '/recommended'
+                ? 'bg-indigo-50 text-indigo-700 font-bold'
+                : 'hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-amber-600" />
+            <span>Recommended</span>
+          </Link>
+
+          <Link
+            to="/bookmarks"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+              location.pathname === '/bookmarks'
+                ? 'bg-indigo-50 text-indigo-700 font-bold'
+                : 'hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Bookmark className="w-4 h-4" />
+            <span>Bookmarks</span>
+          </Link>
+
+          <Link
+            to="/calendar"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+              location.pathname === '/calendar'
+                ? 'bg-indigo-50 text-indigo-700 font-bold'
+                : 'hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Calendar className="w-4 h-4" />
-            <span>Explore Events</span>
+            <span>Calendar</span>
           </Link>
 
           <Link
-            to="/organizer"
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl transition ${
-              location.pathname.startsWith('/organizer')
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            to="/teams"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+              location.pathname.startsWith('/teams')
+                ? 'bg-indigo-50 text-indigo-700 font-bold'
+                : 'hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <Layers className="w-4 h-4" />
-            <span>Organizer Studio</span>
+            <Users className="w-4 h-4" />
+            <span>Teams</span>
           </Link>
 
-          <Link
-            to="/admin/approvals"
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl transition relative ${
-              location.pathname.startsWith('/admin')
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4" />
-            <span>Approval Desk</span>
-            {pendingReviewCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black">
-                {pendingReviewCount}
-              </span>
-            )}
-          </Link>
+          {/* Organizer portal link if authorized */}
+          {isOrganizer && (
+            <Link
+              to="/organizer"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                location.pathname.startsWith('/organizer')
+                  ? 'bg-indigo-50 text-indigo-700 font-bold'
+                  : 'hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>Organizer</span>
+            </Link>
+          )}
+
+          {/* Admin desk link if admin */}
+          {isAdmin && (
+            <Link
+              to="/admin/approvals"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition relative ${
+                location.pathname.startsWith('/admin')
+                  ? 'bg-indigo-50 text-indigo-700 font-bold'
+                  : 'hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4" />
+              <span>Approvals</span>
+              {pendingReviewCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-600 text-white text-[10px] font-bold">
+                  {pendingReviewCount}
+                </span>
+              )}
+            </Link>
+          )}
         </nav>
 
         {/* Right Section: Role Switcher & Notifications & Profile */}
         <div className="flex items-center gap-3">
-          {/* Quick Demo Role Switcher (Crucial for test evaluation!) */}
-          <div className="flex items-center p-1 rounded-xl bg-slate-900/90 border border-slate-800/80 text-xs font-semibold">
-            <span className="text-[10px] text-slate-500 px-2 uppercase tracking-wider hidden lg:inline">
-              Role:
-            </span>
+          {/* Quick Demo Role Switcher */}
+          <div className="flex items-center p-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold">
+            <button
+              onClick={() => switchRole('student')}
+              className={`px-2.5 py-1 rounded-md transition ${
+                user?.role === 'student'
+                  ? 'bg-white text-indigo-600 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Student
+            </button>
             <button
               onClick={() => switchRole('organizer')}
-              className={`px-2.5 py-1 rounded-lg transition ${
+              className={`px-2.5 py-1 rounded-md transition ${
                 user?.role === 'organizer'
-                  ? 'bg-indigo-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white text-indigo-600 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Organizer
             </button>
             <button
               onClick={() => switchRole('admin')}
-              className={`px-2.5 py-1 rounded-lg transition ${
+              className={`px-2.5 py-1 rounded-md transition ${
                 user?.role === 'admin'
-                  ? 'bg-amber-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white text-indigo-600 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Admin
-            </button>
-            <button
-              onClick={() => switchRole('student')}
-              className={`px-2.5 py-1 rounded-lg transition ${
-                user?.role === 'student'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Student
             </button>
           </div>
 
@@ -200,25 +238,26 @@ const Navbar = () => {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setShowNotifications((prev) => !prev)}
-              className="relative p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition"
+              className="relative p-2 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 transition"
+              title="Notifications"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-slate-950">
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white ring-2 ring-white">
                   {unreadCount}
                 </span>
               )}
             </button>
 
-            {/* Notification Popover */}
+            {/* Notification Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-3 w-84 sm:w-96 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden z-50">
-                <div className="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/70">
+              <div className="absolute right-0 mt-2 w-84 sm:w-96 rounded-xl bg-white border border-slate-200 shadow-xl overflow-hidden z-50 animate-in fade-in duration-150">
+                <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-indigo-400" />
-                    <span className="font-bold text-sm text-white">Notifications</span>
+                    <Bell className="w-4 h-4 text-indigo-600" />
+                    <span className="font-bold text-sm text-slate-900">Notifications</span>
                     {unreadCount > 0 && (
-                      <span className="px-2 py-0.2 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-semibold">
+                      <span className="px-1.5 py-0.2 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">
                         {unreadCount} new
                       </span>
                     )}
@@ -226,7 +265,7 @@ const Navbar = () => {
                   {unreadCount > 0 && (
                     <button
                       onClick={handleMarkAllRead}
-                      className="text-xs text-slate-400 hover:text-indigo-400 flex items-center gap-1 transition"
+                      className="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1 transition"
                     >
                       <CheckCheck className="w-3.5 h-3.5" />
                       <span>Mark all read</span>
@@ -234,7 +273,7 @@ const Navbar = () => {
                   )}
                 </div>
 
-                <div className="max-h-80 overflow-y-auto divide-y divide-slate-800/60">
+                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
                   {notifications.length === 0 ? (
                     <div className="py-8 text-center text-slate-400 text-xs">
                       No notifications yet.
@@ -244,19 +283,19 @@ const Navbar = () => {
                       <div
                         key={n._id}
                         onClick={() => !n.isRead && handleMarkAsRead(n._id)}
-                        className={`p-3.5 hover:bg-slate-800/50 transition cursor-pointer flex items-start gap-3 ${
-                          !n.isRead ? 'bg-indigo-950/20' : ''
+                        className={`p-3.5 hover:bg-slate-50 transition cursor-pointer flex items-start gap-3 ${
+                          !n.isRead ? 'bg-indigo-50/40' : ''
                         }`}
                       >
                         <div
-                          className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${
-                            !n.isRead ? 'bg-indigo-500' : 'bg-transparent'
+                          className={`mt-1 h-2 w-2 rounded-full shrink-0 ${
+                            !n.isRead ? 'bg-indigo-600' : 'bg-transparent'
                           }`}
                         />
-                        <div className="flex-1 space-y-1">
-                          <p className="text-xs font-semibold text-slate-200">{n.title}</p>
-                          <p className="text-xs text-slate-400 leading-snug">{n.message}</p>
-                          <span className="text-[10px] text-slate-500 block">
+                        <div className="flex-1 space-y-0.5">
+                          <p className="text-xs font-semibold text-slate-900">{n.title}</p>
+                          <p className="text-xs text-slate-600 leading-snug">{n.message}</p>
+                          <span className="text-[10px] text-slate-400 block pt-0.5">
                             {new Date(n.createdAt).toLocaleTimeString([], {
                               hour: '2-digit',
                               minute: '2-digit',
@@ -271,16 +310,16 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Current User Pill */}
-          <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-800">
-            <div className="h-8 w-8 rounded-full bg-indigo-950 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold text-xs uppercase">
+          {/* User profile pill */}
+          <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-200">
+            <div className="h-8 w-8 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase">
               {user?.name?.slice(0, 2) || 'EV'}
             </div>
-            <div className="text-left text-xs leading-none">
-              <span className="font-semibold text-white block truncate max-w-[110px]">
+            <div className="text-left text-xs leading-tight">
+              <span className="font-semibold text-slate-900 block truncate max-w-[100px]">
                 {user?.name || 'User'}
               </span>
-              <span className="text-[10px] text-slate-400 capitalize">
+              <span className="text-[10px] text-slate-500 capitalize">
                 {user?.role}
               </span>
             </div>

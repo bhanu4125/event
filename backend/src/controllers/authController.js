@@ -122,6 +122,7 @@ export const demoLogin = async (req, res) => {
         department: user.department,
         year: user.year,
         phone: user.phone,
+        interests: user.interests || [],
         token,
       },
     });
@@ -129,3 +130,66 @@ export const demoLogin = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getMyInterests = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('interests');
+    res.json({
+      success: true,
+      data: user?.interests || [],
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateMyInterests = async (req, res) => {
+  try {
+    const { interests } = req.body;
+    if (!Array.isArray(interests)) {
+      return res.status(400).json({ success: false, message: 'Interests must be an array of strings' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { interests },
+      { new: true, runValidators: true }
+    ).select('interests');
+
+    res.json({
+      success: true,
+      message: 'Interests updated successfully',
+      data: user.interests,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const searchStudents = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query || query.trim().length < 2) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const users = await User.find({
+      _id: { $ne: req.user._id },
+      $or: [
+        { name: { $regex: query.trim(), $options: 'i' } },
+        { email: { $regex: query.trim(), $options: 'i' } },
+        { department: { $regex: query.trim(), $options: 'i' } },
+      ],
+    })
+      .select('name email department year avatar')
+      .limit(10);
+
+    res.json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

@@ -9,6 +9,8 @@ import {
   publishEvent,
   cancelEvent,
   getPublicEvents,
+  getRecommendedEvents,
+  getEventsCalendar,
   getOrganizerEvents,
   getAdminEvents,
   getEventById,
@@ -18,8 +20,10 @@ import { protect, authorize, validateObjectId } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Public routes
+// Public discovery routes
 router.get('/public', getPublicEvents);
+router.get('/recommended', getRecommendedEvents);
+router.get('/calendar', getEventsCalendar);
 
 // Organizer routes
 router.get('/organizer/my-events', protect, authorize('organizer', 'admin'), getOrganizerEvents);

@@ -122,6 +122,17 @@ const eventSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    teamFormationDeadline: {
+      type: Date,
+    },
+    requiresOrganizerApproval: {
+      type: Boolean,
+      default: false,
+    },
     rules: {
       type: String,
       default: '1. Maintain discipline.\n2. Carry valid college ID card.\n3. Late entries are strictly prohibited.',
