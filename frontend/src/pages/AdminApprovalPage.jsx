@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import EventDetailModal from '../components/common/EventDetailModal';
+import AdminNavTabs from '../components/common/AdminNavTabs';
 import {
   ShieldAlert,
   CheckCircle2,
@@ -191,6 +192,9 @@ const AdminApprovalPage = () => {
           </button>
         </div>
       </section>
+
+      {/* Admin Dashboard Navigation Options: Calendar | Saved | Organizer | Approvals */}
+      <AdminNavTabs pendingCount={stats.pending} />
 
       {/* Main Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">

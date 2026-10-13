@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -17,7 +17,14 @@ import {
 } from 'lucide-react';
 
 const TeamFinderPage = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAdmin) {
+      navigate('/admin/approvals', { replace: true });
+    }
+  }, [isAdmin, navigate]);
   const [teams, setTeams] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);

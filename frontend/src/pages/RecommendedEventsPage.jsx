@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/common/EventCard';
@@ -30,7 +31,15 @@ const AVAILABLE_INTERESTS = [
 ];
 
 const RecommendedEventsPage = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAdmin) {
+      navigate('/admin/approvals', { replace: true });
+    }
+  }, [isAdmin, navigate]);
+
   const [recommendedEvents, setRecommendedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userInterests, setUserInterests] = useState([]);

@@ -138,7 +138,7 @@ const Navbar = () => {
     <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand */}
-        <Link to="/" className="flex items-center gap-2.5 group">
+        <Link to={isAdmin ? '/admin/approvals' : '/'} className="flex items-center gap-2.5 group">
           <div className="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm group-hover:bg-indigo-700 transition">
             <Sparkles className="w-5 h-5" />
           </div>
@@ -156,100 +156,139 @@ const Navbar = () => {
 
         {/* Center Nav Links */}
         <nav className="hidden lg:flex items-center gap-1 text-sm font-semibold text-slate-600">
-          <Link
-            to="/"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
-              location.pathname === '/'
-                ? 'bg-indigo-50 text-indigo-700 font-bold'
-                : 'hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Compass className="w-4 h-4" />
-            <span>Discover</span>
-          </Link>
+          {isAdmin ? (
+            /* Admin Only Options: Calendar, Saved, Organizer, Approvals */
+            <>
+              <Link
+                to="/calendar"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  location.pathname === '/calendar'
+                    ? 'bg-indigo-50 text-indigo-700 font-bold'
+                    : 'hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Calendar className="w-4 h-4 text-indigo-600" />
+                <span>Calendar</span>
+              </Link>
 
-          <Link
-            to="/calendar"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
-              location.pathname === '/calendar'
-                ? 'bg-indigo-50 text-indigo-700 font-bold'
-                : 'hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Calendar</span>
-          </Link>
+              <Link
+                to="/bookmarks"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  location.pathname === '/bookmarks'
+                    ? 'bg-indigo-50 text-indigo-700 font-bold'
+                    : 'hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Bookmark className="w-4 h-4 text-amber-500" />
+                <span>Saved</span>
+              </Link>
 
-          <Link
-            to="/teams"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
-              location.pathname === '/teams'
-                ? 'bg-indigo-50 text-indigo-700 font-bold'
-                : 'hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Teams</span>
-          </Link>
+              <Link
+                to="/organizer"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  location.pathname.startsWith('/organizer')
+                    ? 'bg-emerald-50 text-emerald-700 font-bold'
+                    : 'hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Layers className="w-4 h-4 text-emerald-600" />
+                <span>Organizer</span>
+              </Link>
 
-          {/* Protected Links (Accessible or Redirects) */}
-          <Link
-            to="/recommended"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
-              location.pathname === '/recommended'
-                ? 'bg-indigo-50 text-indigo-700 font-bold'
-                : 'hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>For You</span>
-          </Link>
+              <Link
+                to="/admin/approvals"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition relative ${
+                  location.pathname.startsWith('/admin')
+                    ? 'bg-purple-50 text-purple-700 font-bold'
+                    : 'hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <ShieldAlert className="w-4 h-4 text-purple-600" />
+                <span>Approvals</span>
+                {pendingReviewCount > 0 && (
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-600 text-white text-[10px] font-bold">
+                    {pendingReviewCount}
+                  </span>
+                )}
+              </Link>
+            </>
+          ) : (
+            /* Non-Admin (Student / General Visitor) Options */
+            <>
+              <Link
+                to="/"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  location.pathname === '/'
+                    ? 'bg-indigo-50 text-indigo-700 font-bold'
+                    : 'hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Compass className="w-4 h-4" />
+                <span>Discover</span>
+              </Link>
 
-          <Link
-            to="/bookmarks"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
-              location.pathname === '/bookmarks'
-                ? 'bg-indigo-50 text-indigo-700 font-bold'
-                : 'hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Bookmark className="w-4 h-4" />
-            <span>Saved</span>
-          </Link>
+              <Link
+                to="/calendar"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  location.pathname === '/calendar'
+                    ? 'bg-indigo-50 text-indigo-700 font-bold'
+                    : 'hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Calendar</span>
+              </Link>
 
-          {/* Organizer portal link if authorized */}
-          {isOrganizer && (
-            <Link
-              to="/organizer"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
-                location.pathname.startsWith('/organizer')
-                  ? 'bg-emerald-50 text-emerald-700 font-bold'
-                  : 'hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <Layers className="w-4 h-4 text-emerald-600" />
-              <span>Organizer</span>
-            </Link>
-          )}
+              <Link
+                to="/teams"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  location.pathname === '/teams'
+                    ? 'bg-indigo-50 text-indigo-700 font-bold'
+                    : 'hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Teams</span>
+              </Link>
 
-          {/* Admin desk link if admin */}
-          {isAdmin && (
-            <Link
-              to="/admin/approvals"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition relative ${
-                location.pathname.startsWith('/admin')
-                  ? 'bg-purple-50 text-purple-700 font-bold'
-                  : 'hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <ShieldAlert className="w-4 h-4 text-purple-600" />
-              <span>Approvals</span>
-              {pendingReviewCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-600 text-white text-[10px] font-bold">
-                  {pendingReviewCount}
-                </span>
+              <Link
+                to="/recommended"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  location.pathname === '/recommended'
+                    ? 'bg-indigo-50 text-indigo-700 font-bold'
+                    : 'hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>For You</span>
+              </Link>
+
+              <Link
+                to="/bookmarks"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  location.pathname === '/bookmarks'
+                    ? 'bg-indigo-50 text-indigo-700 font-bold'
+                    : 'hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Bookmark className="w-4 h-4" />
+                <span>Saved</span>
+              </Link>
+
+              {isOrganizer && (
+                <Link
+                  to="/organizer"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                    location.pathname.startsWith('/organizer')
+                      ? 'bg-emerald-50 text-emerald-700 font-bold'
+                      : 'hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <Layers className="w-4 h-4 text-emerald-600" />
+                  <span>Organizer</span>
+                </Link>
               )}
-            </Link>
+            </>
           )}
         </nav>
 

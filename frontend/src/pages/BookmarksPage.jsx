@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../api/apiClient';
+import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/common/EventCard';
 import EventDetailModal from '../components/common/EventDetailModal';
+import AdminNavTabs from '../components/common/AdminNavTabs';
 import { Bookmark, Compass, RefreshCw } from 'lucide-react';
 
 const BookmarksPage = () => {
+  const { isAdmin } = useAuth();
   const [bookmarkedEvents, setBookmarkedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -57,6 +60,9 @@ const BookmarksPage = () => {
           </button>
         </div>
       </section>
+
+      {/* Admin Navigation Tabs when accessed by Admin */}
+      {isAdmin && <AdminNavTabs />}
 
       {/* Bookmarks Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">

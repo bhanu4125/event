@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
+import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/common/EventCard';
 import EventDetailModal from '../components/common/EventDetailModal';
 import {
@@ -36,6 +38,15 @@ const DEPARTMENTS = [
 ];
 
 const PublicEventsPage = () => {
+  const { isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAdmin) {
+      navigate('/admin/approvals', { replace: true });
+    }
+  }, [isAdmin, navigate]);
+
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

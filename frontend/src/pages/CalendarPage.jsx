@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/apiClient';
+import { useAuth } from '../context/AuthContext';
 import EventDetailModal from '../components/common/EventDetailModal';
+import AdminNavTabs from '../components/common/AdminNavTabs';
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,6 +14,7 @@ import {
 } from 'lucide-react';
 
 const CalendarPage = () => {
+  const { isAdmin } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -115,6 +118,9 @@ const CalendarPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Admin Navigation Tabs when accessed by Admin */}
+      {isAdmin && <AdminNavTabs />}
 
       {/* Calendar Grid Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">

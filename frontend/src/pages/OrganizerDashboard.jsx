@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import EventDetailModal from '../components/common/EventDetailModal';
+import AdminNavTabs from '../components/common/AdminNavTabs';
 import {
   Plus,
   Calendar,
@@ -23,7 +24,7 @@ import {
 
 const OrganizerDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const [events, setEvents] = useState([]);
   const [stats, setStats] = useState({
@@ -212,6 +213,9 @@ const OrganizerDashboard = () => {
           </div>
         </div>
       </section>
+
+      {/* Admin Navigation Tabs when accessed by Admin */}
+      {isAdmin && <AdminNavTabs />}
 
       {/* Main Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
