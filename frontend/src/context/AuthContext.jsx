@@ -33,6 +33,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password, portalRole = null) => {
     const res = await apiClient.post('/auth/login', { email, password, portalRole });
+    if (!res.data?.data?.token) {
+      throw new Error(res.data?.message || 'Invalid server response from backend. Please verify database and backend status.');
+    }
     const { token: newToken, ...userData } = res.data.data;
     localStorage.setItem('eventra_token', newToken);
     setToken(newToken);
@@ -42,6 +45,9 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     const res = await apiClient.post('/auth/register', userData);
+    if (!res.data?.data?.token) {
+      throw new Error(res.data?.message || 'Invalid server response from backend. Please verify database and backend status.');
+    }
     const { token: newToken, ...userPayload } = res.data.data;
     localStorage.setItem('eventra_token', newToken);
     setToken(newToken);

@@ -14,7 +14,10 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/eventra';
+let MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/eventra';
+if (MONGO_URI.includes('mongodb+srv://') && !MONGO_URI.split('?')[0].includes('.net/')) {
+  MONGO_URI = MONGO_URI.replace('.net', '.net/eventra');
+}
 
 // Middlewares
 app.use(cors({

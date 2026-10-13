@@ -25,7 +25,21 @@ apiClient.interceptors.request.use(
 
 // Interceptor for responses
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (
+      typeof response.data === 'string' &&
+      (response.data.trim().startsWith('<!DOCTYPE') ||
+        response.data.trim().startsWith('<html') ||
+        response.data.trim().startsWith('<!doctype'))
+    ) {
+      const err = new Error(
+        'Backend API not connected! Please set VITE_API_URL in your Render Frontend Environment Variables pointing to your Render Backend URL and redeploy.'
+      );
+      err.status = 502;
+      return Promise.reject(err);
+    }
+    return response;
+  },
   (error) => {
     const message =
       error.response?.data?.message || error.message || 'Something went wrong';
